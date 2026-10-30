@@ -27,6 +27,7 @@ export async function initAds() {
       maxAdContentRating: mod.MaxAdContentRating.General,
     });
     ready = true;
+    queueBanner();
     preloadRewarded();
     preloadInterstitial();
   } catch (e) {
@@ -99,12 +100,30 @@ export async function maybeShowInterstitial() {
   }
 }
 
+// ---- Banner ----
+// The banner is shown only on the park screen, and hidden whenever a popup
+// is open, so it never covers buttons (and kids don't tap it by accident).
 let bannerShown = false;
-export async function setBanner(visible) {
-  if (!native || !ready || !ADMOB.showBanner) return;
+let bannerWanted = false;
+let popupCount = 0;
+let bannerBusy = Promise.resolve();
+
+function setBannerSpace(h) {
+  document.body.style.setProperty('--banner', (h > 0 ? Math.ceil(h) + 4 : 0) + 'px');
+}
+
+async function applyBanner() {
+  const visible = bannerWanted && popupCount === 0;
+  if (!native || !ready || !ADMOB.showBanner) { setBannerSpace(0); return; }
   try {
+    const mod = await import('@capacitor-community/admob');
     if (visible && !bannerShown) {
-      const mod = await import('@capacitor-community/admob');
+      if (!applyBanner.listening) {
+        applyBanner.listening = true;
+        AdMob.addListener(mod.BannerAdPluginEvents.SizeChanged, (info) => {
+          setBannerSpace(bannerWanted && popupCount === 0 ? info?.height || 0 : 0);
+        });
+      }
       await AdMob.showBanner({
         adId: ADMOB.bannerId, isTesting: ADMOB.testing, npa: true,
         adSize: mod.BannerAdSize.ADAPTIVE_BANNER,
@@ -114,11 +133,26 @@ export async function setBanner(visible) {
     } else if (visible) {
       await AdMob.resumeBanner();
     } else if (bannerShown) {
+      setBannerSpace(0);
       await AdMob.hideBanner();
     }
   } catch (e) { /* no banner */ }
-  document.body.classList.toggle('has-banner', visible && native);
+  if (!visible) setBannerSpace(0);
 }
+
+function queueBanner() {
+  bannerBusy = bannerBusy.then(applyBanner, applyBanner);
+}
+
+export function setBanner(visible) {
+  bannerWanted = visible;
+  queueBanner();
+}
+
+// Called by every popup: open -> hide banner, close -> show it again
+export function popupOpened() { popupCount++; queueBanner(); }
+export function popupClosed() { popupCount = Math.max(0, popupCount - 1); queueBanner(); }
+export function popupReset() { if (popupCount) { popupCount = 0; queueBanner(); } }
 
 // Browser-only stand-in so every reward flow can be tested without a phone.
 function demoAd(label, seconds) {

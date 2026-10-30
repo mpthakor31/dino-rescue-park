@@ -17,7 +17,6 @@
   --safe-b: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
   --banner: 0px;
 }
-body.has-banner { --banner: 60px; }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #8fd3ff; touch-action: none; overscroll-behavior: none; }
@@ -108,17 +107,17 @@ body { font-family: 'Baloo 2', 'Arial Rounded MT Bold', system-ui, sans-serif; c
 .logo .tag { margin-top: 14px; display: inline-block; background: #fff; border: 3px solid var(--ink); border-radius: 999px; padding: 2px 14px; font-weight: 800; }
 
 /* ---------- Panels / modals ---------- */
-.modal-bg { position: absolute; inset: 0; background: rgba(43,35,64,.45); display: grid; place-items: center; padding: 16px; animation: fadein .2s; z-index: 10; }
+.modal-bg { position: absolute; inset: 0; background: rgba(43,35,64,.45); display: flex; align-items: center; justify-content: center; padding: calc(12px + var(--safe-t)) 16px calc(12px + var(--safe-b) + var(--banner)); animation: fadein .2s; z-index: 10; }
 @keyframes fadein { from { opacity: 0; } }
 .panel {
-  width: min(440px, 100%); max-height: calc(100% - 20px); display: flex; flex-direction: column; background: var(--cream);
+  width: min(440px, 100%); max-height: 100%; min-height: 0; display: flex; flex-direction: column; background: var(--cream);
   border: 4px solid var(--ink); border-radius: 28px; box-shadow: 0 8px 0 var(--ink); animation: pop .3s both; overflow: hidden;
 }
-.panel-head { position: relative; text-align: center; padding: 12px 56px; background: var(--c, var(--yellow)); border-bottom: 4px solid var(--ink);
+.panel-head { flex: none; position: relative; text-align: center; padding: 12px 56px; background: var(--c, var(--yellow)); border-bottom: 4px solid var(--ink);
   font-weight: 800; font-size: 26px; color: #fff; -webkit-text-stroke: 2px var(--ink); paint-order: stroke fill; text-shadow: 0 3px 0 var(--ink); }
 .panel-head .close { position: absolute; right: 8px; top: 8px; width: 42px; height: 42px; font-size: 20px; border-radius: 50%; padding: 0; --c: #ff6b6b; color: #fff; -webkit-text-stroke: 0; text-shadow: none; }
-.panel-body { padding: 14px; overflow-y: auto; touch-action: pan-y; }
-.panel-foot { padding: 12px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; border-top: 3px dashed rgba(43,35,64,.2); }
+.panel-body { padding: 14px; overflow-y: auto; min-height: 0; flex: 1 1 auto; touch-action: pan-y; }
+.panel-foot { flex: none; padding: 12px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; border-top: 3px dashed rgba(43,35,64,.2); }
 
 .tabs { display: flex; gap: 8px; margin-bottom: 12px; }
 .tabs .btn { flex: 1; font-size: 17px; }

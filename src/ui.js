@@ -3,6 +3,7 @@ import { sfx } from './audio.js';
 import { buildDino, buildEgg } from './dino.js';
 import { SPECIES } from './data.js';
 import { save } from './save.js';
+import { popupOpened, popupClosed, popupReset } from './ads.js';
 
 export const uiRoot = document.getElementById('ui');
 
@@ -14,6 +15,7 @@ export function h(html) {
 
 export function clearUI() {
   uiRoot.innerHTML = '';
+  popupReset();
 }
 
 // Attach a click handler with a tap sound
@@ -35,9 +37,17 @@ export function modal({ title, color = 'var(--yellow)', body, foot = '', onClose
   const b = m.querySelector('.panel-body');
   if (typeof body === 'string') b.innerHTML = body;
   else if (body) b.appendChild(body);
-  const close = () => { m.remove(); onClose?.(); };
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    m.remove();
+    popupClosed();
+    onClose?.();
+  };
   if (closable) on(m, '.close', close);
   uiRoot.appendChild(m);
+  popupOpened();
   m.close = close;
   return m;
 }
