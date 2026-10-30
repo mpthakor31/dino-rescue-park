@@ -1,0 +1,86 @@
+name: Build Android App
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HAS_KEYSTORE: ${{ secrets.KEYSTORE_BASE64 != '' }}
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Add missing setup files
+        run: |
+          if [ ! -f capacitor.config.json ]; then
+            echo '{ "appId": "com.dinorescuepark.kids", "appName": "Dino Rescue Park", "webDir": "dist", "android": { "backgroundColor": "#8fd3ff" }, "plugins": { "SplashScreen": { "launchShowDuration": 0 }, "SystemBars": { "insetsHandling": "css", "initialViewportFitValueHint": "cover" } } }' > capacitor.config.json
+            echo "Created capacitor.config.json"
+          fi
+          if [ ! -f vite.config.js ]; then
+            printf "export default { base: './', build: { chunkSizeWarningLimit: 1200 } };\n" > vite.config.js
+            echo "Created vite.config.js"
+          fi
+
+      - name: Install game libraries
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+
+      - name: Build the game
+        run: npx vite build
+
+      - name: Copy game into Android project
+        run: npx cap sync android
+
+      - name: Build test APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: dino-rescue-park-test-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Prepare signing key
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload-key.jks"
+
+      - name: Build Play Store bundle (AAB)
+        if: env.HAS_KEYSTORE == 'true'
+        working-directory: android
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/upload-key.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Upload Play Store bundle
+        if: env.HAS_KEYSTORE == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: dino-rescue-park-playstore-aab
+          path: android/app/build/outputs/bundle/release/app-release.aab
