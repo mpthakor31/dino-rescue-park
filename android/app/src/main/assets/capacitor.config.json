@@ -1,0 +1,18 @@
+{
+	"appId": "com.dinorescuepark.kids",
+	"appName": "Dino Rescue Park",
+	"webDir": "dist",
+	"android": {
+		"backgroundColor": "#8fd3ff",
+		"allowMixedContent": false
+	},
+	"plugins": {
+		"SplashScreen": {
+			"launchShowDuration": 0
+		},
+		"SystemBars": {
+			"insetsHandling": "css",
+			"initialViewportFitValueHint": "cover"
+		}
+	}
+}
